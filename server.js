@@ -42,7 +42,6 @@ app.post("/login", function (req, res) {
           username: rep[0].username,
           role: rep[0].role,
         };
-        console.log(responseObject);
         res.send(responseObject);
       }
     })
@@ -63,7 +62,7 @@ function checkAuthentication(req, res, next) {
 }
 
 app.use("/arth", arthRouter);
-app.use("/todos", todosRouter);
+app.use("/todos", checkAuthentication, todosRouter);
 app.use("/students", studentRouter);
 app.use("/reviews", checkAuthentication, reviewRouter);
 app.use("/courses", courseRouter);
