@@ -21,7 +21,9 @@ var todosRouter = require("./todos/todos.routes");
 var studentRouter = require("./student/student.routes");
 var reviewRouter = require("./reviews/reviews.routes");
 var courseRouter = require("./courses/course.router");
-
+var sellerRouter = require("./seller/seller.routes");
+var productRouter = require("./products/product.routes");
+var orderRouter = require("./orders/order.routes");
 var UserModel = require("./user.model");
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -51,22 +53,26 @@ app.post("/login", function (req, res) {
 });
 
 function checkAuthentication(req, res, next) {
-  console.log(req.headers);
   try {
-    var x = jwt.verify(req.headers.token, "Shh Evariki cheppaku");
-    console.log(x);
+    // Assuming your token payload has { username, role }
+    var userPayload = jwt.verify(req.headers.token, "Shh Evariki cheppaku");
+    req.user = userPayload; // Attach payload to req for controllers to use
     next();
   } catch (e) {
-    res.send("wrong credentials");
+    res.status(401).send("Invalid Token / Not Authenticated");
   }
 }
-
 app.use("/arth", arthRouter);
 app.use("/todos", checkAuthentication, todosRouter);
 app.use("/students", studentRouter);
 app.use("/reviews", checkAuthentication, reviewRouter);
 app.use("/courses", courseRouter);
+// Routes
+app.use("/sellers", checkAuthentication, sellerRouter);
+app.use("/products", checkAuthentication, productRouter);
+// Note: If you want public access to GET products, move getAllProducts route out of checkAuth
 
+app.use("/orders", checkAuthentication, orderRouter);
 app.listen(3500);
 
 // http://localhost:3500/add/10/20

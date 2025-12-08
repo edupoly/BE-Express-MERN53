@@ -1,6 +1,7 @@
 var fs = require("fs");
 
 function getTodos(req, res) {
+  console.log("getAllTodos");
   fs.readFile("./todos.txt", function (err, data) {
     if (err) {
       res.send("Error vachind");

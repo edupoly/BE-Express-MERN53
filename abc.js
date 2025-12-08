@@ -1,5 +1,6 @@
 db.employees.aggregate([
   {
-    $unwind:"$projects"
-  }
+    $unwind: "$projects",
+  },
 ]);
+db.orders.delete({ $exists: { description: 1 } });
