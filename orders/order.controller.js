@@ -1,8 +1,6 @@
 const OrderModel = require("./order.model");
 const ProductModel = require("../products/product.model");
 const SellerModel = require("../seller/seller.model");
-const UserModel = require("../user.model");
-const OrderModel = require("./order.model");
 const SellerProductModel = require("../seller/sellerProduct.model");
 const UserModel = require("../user.model");
 const { v4: uuidv4 } = require("uuid"); // You might need 'npm install uuid' or just use Date.now()
