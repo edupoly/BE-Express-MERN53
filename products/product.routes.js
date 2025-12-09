@@ -6,7 +6,6 @@ const controller = require("./product.controller");
 router.get("/", controller.getAllProducts);
 
 // Seller Only
-router.post("/add", controller.addProduct); // Auth middleware is in server.js
 router.get("/my-products", controller.getMyProducts);
 
 module.exports = router;

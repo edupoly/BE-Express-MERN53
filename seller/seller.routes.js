@@ -10,5 +10,7 @@ const checkAdmin = (req, res, next) => {
 
 router.post("/promote", checkAdmin, controller.promoteUserToSeller);
 router.get("/me", controller.getMySellerProfile);
+router.post("/add-product-stock", controller.addProductStock);
+router.get("/my-inventory", controller.getMyInventory);
 
 module.exports = router;

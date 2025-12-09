@@ -43,12 +43,23 @@ async function addProductStock(req, res) {
     const user = await UserModel.findOne({ username: req.user.username });
     const seller = await SellerModel.findOne({ userId: user._id });
     if (!seller) return res.status(403).send("Seller not found");
+    // 2. Fetch the Catalog Product to check MSRP (refPrice)
+    const catalogProduct = await ProductModel.findById(productId);
+    if (!catalogProduct)
+      return res.status(404).send("Product not found in catalog");
 
+    // 3. Enforce MSRP Rule
+    if (Number(price) > catalogProduct.refPrice) {
+      return res
+        .status(400)
+        .send(`Price cannot exceed MSRP of ${catalogProduct.refPrice}`);
+    }
     // Upsert: Update if exists, Create if not
     await SellerProductModel.findOneAndUpdate(
       { sellerId: seller._id, productId: productId },
       {
-        $set: { price, stock, discountPercentage, isActive: true },
+        $set: { price, discountPercentage, isActive: true },
+        $inc: { stock: Number(stock) },
       },
       { upsert: true, new: true }
     );
