@@ -2,54 +2,77 @@ const OrderModel = require("./order.model");
 const ProductModel = require("../products/product.model");
 const SellerModel = require("../seller/seller.model");
 const UserModel = require("../user.model");
+const OrderModel = require("./order.model");
+const SellerProductModel = require("../seller/sellerProduct.model");
+const UserModel = require("../user.model");
+const { v4: uuidv4 } = require("uuid"); // You might need 'npm install uuid' or just use Date.now()
 
-// Customer: Create Order
 async function createOrder(req, res) {
   try {
-    const { items, deliveryAddress } = req.body; // items: [{productId, quantity}]
+    const { items, deliveryAddress } = req.body;
     const user = await UserModel.findOne({ username: req.user.username });
 
     if (!items || items.length === 0) return res.status(400).send("No items");
 
-    // Retrieve product details to get price and seller
-    const product = await ProductModel.findById(items[0].productId);
-    if (!product) return res.status(404).send("Product not found");
+    // Generate a unique Group ID for this entire checkout (Cart ID)
+    const groupId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    // NOTE: Simplified logic - Assuming an order contains items from ONLY ONE seller
-    // In a complex app, you would split mixed-cart items into multiple orders.
-    const sellerId = product.sellerId;
-    let totalAmount = 0;
-
-    // Calculate total and formatted items
-    const orderItems = [];
-    for (let item of items) {
-      const p = await ProductModel.findById(item.productId);
-      if (p.stock < item.quantity)
-        return res.status(400).send(`Insufficient stock for ${p.title}`);
-
-      totalAmount += p.price * item.quantity;
-      orderItems.push({
-        productId: p._id,
-        quantity: item.quantity,
-        priceAtPurchase: p.price,
+    const orderPromises = items.map(async (item) => {
+      // 1. Verify Stock & Price
+      const inventory = await SellerProductModel.findOne({
+        sellerId: item.sellerId,
+        productId: item.productId,
       });
-    }
 
-    const newOrder = new OrderModel({
-      customerId: user._id,
-      sellerId: sellerId,
-      items: orderItems,
-      totalAmount,
-      deliveryAddress,
+      if (!inventory)
+        throw new Error(`Product not found for seller ${item.sellerId}`);
+      if (inventory.stock < item.quantity)
+        throw new Error(`Insufficient stock for product ${item.productId}`);
+
+      // 2. Create ONE document per ITEM
+      const newOrder = new OrderModel({
+        groupId: groupId, // Links all these items together
+        customerId: user._id,
+        sellerId: item.sellerId,
+        productId: item.productId,
+        quantity: item.quantity,
+        priceAtPurchase: inventory.price,
+        itemTotal: inventory.price * item.quantity,
+        deliveryAddress: deliveryAddress,
+      });
+
+      return newOrder.save();
     });
 
-    await newOrder.save();
-    res.send("Order Placed Successfully");
+    await Promise.all(orderPromises);
+
+    res.send({ message: "Order Placed Successfully", groupId: groupId });
   } catch (err) {
     res.status(500).send(err.message);
   }
 }
 
+// Get Orders (Updated to return flat list)
+async function getOrders(req, res) {
+  const { type } = req.query;
+  const user = await UserModel.findOne({ username: req.user.username });
+
+  let query = {};
+  if (type === "seller") {
+    const seller = await SellerModel.findOne({ userId: user._id });
+    query.sellerId = seller._id;
+  } else {
+    query.customerId = user._id;
+  }
+
+  if (req.query.status) query.status = req.query.status;
+
+  // Populate product details so the UI can show "iPhone 13" instead of ID
+  const orders = await OrderModel.find(query)
+    .populate("productId")
+    .sort({ orderDate: -1 });
+  res.send(orders);
+}
 // Customer: Cancel Order
 async function cancelOrder(req, res) {
   try {
@@ -127,30 +150,6 @@ async function getSellerStats(req, res) {
   } catch (err) {
     res.status(500).send(err.message);
   }
-}
-
-// Get Orders (Generic filter)
-async function getOrders(req, res) {
-  const { type } = req.query; // 'customer' or 'seller'
-  const user = await UserModel.findOne({ username: req.user.username });
-
-  let query = {};
-  if (type === "seller") {
-    const seller = await SellerModel.findOne({ userId: user._id });
-    query.sellerId = seller._id;
-  } else {
-    query.customerId = user._id;
-  }
-
-  // Optional: Filter by specific status via query params ?status=Pending
-  if (req.query.status) {
-    query.status = req.query.status;
-  }
-
-  const orders = await OrderModel.find(query)
-    .populate("items.productId")
-    .sort({ orderDate: -1 });
-  res.send(orders);
 }
 
 module.exports = {

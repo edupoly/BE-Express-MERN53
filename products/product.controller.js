@@ -15,6 +15,22 @@ async function getAllProducts(req, res) {
   }
 }
 
+// Public: Get a single product details with list of Sellers selling it
+async function getProductDetails(req, res) {
+  try {
+    const product = await ProductModel.findById(req.params.id);
+    // Find all sellers selling this product
+    const sellers = await SellerProductModel.find({
+      productId: product._id,
+      stock: { $gt: 0 },
+    }).populate("sellerId", "businessName");
+
+    res.json({ product, availableSellers: sellers });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
+
 // Seller: Add new product
 async function addProduct(req, res) {
   try {
@@ -50,5 +66,20 @@ async function getMyProducts(req, res) {
     res.status(500).send(err.message);
   }
 }
-
-module.exports = { getAllProducts, addProduct, getMyProducts };
+// Admin/Seller: Create a new Catalog Item (Master Product)
+async function createMasterProduct(req, res) {
+  try {
+    const newProduct = new ProductModel(req.body);
+    await newProduct.save();
+    res.send("Master Product Created in Catalog");
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
+module.exports = {
+  getAllProducts,
+  addProduct,
+  getMyProducts,
+  getProductDetails,
+  createMasterProduct,
+};

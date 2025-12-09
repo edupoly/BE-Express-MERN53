@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 
 const orderSchema = mongoose.Schema({
+  // Link them together: The ID of the cart/payment transaction
+  groupId: { type: String, required: true },
+
   customerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "user",
@@ -11,14 +14,19 @@ const orderSchema = mongoose.Schema({
     ref: "seller",
     required: true,
   },
-  items: [
-    {
-      productId: { type: mongoose.Schema.Types.ObjectId, ref: "product" },
-      quantity: Number,
-      priceAtPurchase: Number, // Store price at time of buying
-    },
-  ],
-  totalAmount: Number,
+
+  // Flattened Item Details (No Array)
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "product",
+    required: true,
+  },
+  quantity: { type: Number, required: true },
+  priceAtPurchase: { type: Number, required: true },
+
+  // Costs
+  itemTotal: Number, // price * quantity
+
   status: {
     type: String,
     enum: ["Pending", "Approved", "Shipped", "Delivered", "Cancelled"],
